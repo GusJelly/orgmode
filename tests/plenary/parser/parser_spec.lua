@@ -34,7 +34,7 @@ describe('Parser', function()
       '* TODO Something with a lot of tags :WORK:',
     }
 
-    local parsed = File.from_content(lines, 'todos')
+    local parsed = File.from_content(lines, { category = 'todos' })
     assert.are.same(parsed.tags, { 'Tag1', 'Tag2' })
     assert.are.same(false, parsed.is_archive_file)
     assert_section(parsed, parsed:get_section(1), {
@@ -73,7 +73,7 @@ describe('Parser', function()
       '* NOKEYWORD Headline with wrong todo keyword and wrong tag format :WORK : OFFICE:',
     }
 
-    local parsed = File.from_content(lines, 'todos')
+    local parsed = File.from_content(lines, { category = 'todos' })
     local first_section = parsed:get_section(1)
 
     assert_section(parsed, first_section, {
@@ -228,7 +228,7 @@ describe('Parser', function()
       'DEADLINE: <2021-05-22 Sat>',
     }
 
-    local parsed = File.from_content(lines, 'work')
+    local parsed = File.from_content(lines, { category = 'work' })
     local first_section = parsed:get_section(1)
     assert_section(parsed, first_section, {
       line = '* TODO Test orgmode <2021-05-15 Sat> :WORK:',
@@ -301,7 +301,7 @@ describe('Parser', function()
       'DEADLINE: <2021-05-22 Sat>',
     }
 
-    local parsed = File.from_content(lines, 'work')
+    local parsed = File.from_content(lines, { category = 'work' })
     local first_section = parsed:get_section(1)
     assert_section(parsed, first_section, {
       line = '* TODO Test orgmode :WORK:',
@@ -346,7 +346,7 @@ describe('Parser', function()
       '* TODO Another todo',
     }
 
-    local parsed = File.from_content(lines, 'work')
+    local parsed = File.from_content(lines, { category = 'work' })
     assert_section(parsed, parsed:get_section(1), {
       line = '* TODO Test orgmode :WORK:',
       line_number = 1,
@@ -415,7 +415,7 @@ describe('Parser', function()
       ':END:',
       '* TODO Another todo',
     }
-    local parsed = File.from_content(lines, 'work')
+    local parsed = File.from_content(lines, { category = 'work' })
     local section = parsed:get_section(1)
     assert.are.same({ items = {} }, section.properties)
   end)
@@ -431,7 +431,7 @@ describe('Parser', function()
       '* TODO Another todo',
     }
 
-    local parsed = File.from_content(lines, 'work')
+    local parsed = File.from_content(lines, { category = 'work' })
     local headline = parsed:get_section(1)
     assert.are.same({}, headline.properties.items)
 
@@ -444,7 +444,7 @@ describe('Parser', function()
       '* TODO Another todo',
     }
 
-    parsed = File.from_content(lines, 'work')
+    parsed = File.from_content(lines, { category = 'work' })
     headline = parsed:get_section(1)
     assert.are.same({}, headline.properties.items)
 
@@ -456,7 +456,7 @@ describe('Parser', function()
       '* TODO Another todo',
     }
 
-    parsed = File.from_content(lines, 'work')
+    parsed = File.from_content(lines, { category = 'work' })
     headline = parsed:get_section(1)
     assert.are.same({ some_prop = 'some value' }, headline.properties.items)
 
@@ -469,7 +469,7 @@ describe('Parser', function()
       '* TODO Another todo',
     }
 
-    parsed = File.from_content(lines, 'work')
+    parsed = File.from_content(lines, { category = 'work' })
     headline = parsed:get_section(1)
     assert.are.same({ some_prop = 'some value' }, headline.properties.items)
   end)
@@ -483,7 +483,7 @@ describe('Parser', function()
       ':END:',
       '* TODO Another todo',
     }
-    local parsed = File.from_content(lines, 'work')
+    local parsed = File.from_content(lines, { category = 'work' })
     assert.are.same('work', parsed:get_section(1):get_category())
     lines = {
       '* TODO Test orgmode :WORK:',
@@ -494,7 +494,7 @@ describe('Parser', function()
       ':END:',
       '* TODO Another todo',
     }
-    parsed = File.from_content(lines, 'work')
+    parsed = File.from_content(lines, { category = 'work' })
     assert.are.same('my-category', parsed:get_section(1):get_category())
   end)
 
@@ -507,7 +507,7 @@ describe('Parser', function()
       '#+END_SRC',
       '* TODO Another todo',
     }
-    local parsed = File.from_content(lines, 'work')
+    local parsed = File.from_content(lines, { category = 'work' })
     assert.are.same({ 'javascript' }, parsed.source_code_filetypes)
   end)
 
@@ -520,7 +520,11 @@ describe('Parser', function()
       '#+END_SRC',
       '* TODO Another todo',
     }
-    local parsed = File.from_content(lines, 'work', '/tmp/my-work.org_archive', true)
+    local parsed = File.from_content(lines, {
+      category = 'work',
+      filename = '/tmp/my-work.org_archive',
+      is_archive_file = true,
+    })
     assert.are.same(parsed.is_archive_file, true)
   end)
 
@@ -534,19 +538,19 @@ describe('Parser', function()
       '   Second level content',
       '*** TODO Child todo',
     }
-    local parsed = File.from_content(lines, 'work', '')
+    local parsed = File.from_content(lines, { category = 'work' })
     assert.are.same({ 'TOPTAG', 'WORK', 'MYPROJECT' }, parsed:get_section(1).tags)
     assert.are.same({ 'TOPTAG', 'WORK', 'MYPROJECT', 'CHILDPROJECT' }, parsed:get_section(2).tags)
     assert.are.same({ 'TOPTAG', 'WORK', 'MYPROJECT', 'CHILDPROJECT' }, parsed:get_section(3).tags)
 
     config:extend({ org_use_tag_inheritance = false })
-    parsed = File.from_content(lines, 'work', '')
+    parsed = File.from_content(lines, { category = 'work' })
     assert.are.same({ 'WORK', 'MYPROJECT' }, parsed:get_section(1).tags)
     assert.are.same({ 'CHILDPROJECT' }, parsed:get_section(2).tags)
     assert.are.same({}, parsed:get_section(3).tags)
 
     config:extend({ org_use_tag_inheritance = true, org_tags_exclude_from_inheritance = { 'MYPROJECT' } })
-    parsed = File.from_content(lines, 'work', '')
+    parsed = File.from_content(lines, { category = 'work' })
     assert.are.same({ 'TOPTAG', 'WORK', 'MYPROJECT' }, parsed:get_section(1).tags)
     assert.are.same({ 'TOPTAG', 'WORK', 'CHILDPROJECT' }, parsed:get_section(2).tags)
     assert.are.same({ 'TOPTAG', 'WORK', 'CHILDPROJECT' }, parsed:get_section(3).tags)
@@ -566,7 +570,7 @@ describe('Parser', function()
       '* TODO Another todo',
     }
 
-    local parsed = File.from_content(lines, 'work')
+    local parsed = File.from_content(lines, { category = 'work' })
     local first_clock_start = Date.from_string('2021-09-23 10:00', {
       type = 'LOGBOOK',
       active = false,
@@ -696,7 +700,7 @@ describe('Parser', function()
       '* TODO Test with date <2022-05-02 Mon 12:00>',
     }
 
-    local parsed = File.from_content(lines, 'work', '')
+    local parsed = File.from_content(lines, { category = 'work' })
 
     assert_section(parsed, parsed:get_section(1), {
       line = '* TODO Test with date <2022-05-02 Mon 12:00>',

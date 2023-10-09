@@ -148,7 +148,10 @@ function Capture:_get_refile_vars()
     vim.fn.writefile({}, file)
   end
   local lines = vim.api.nvim_buf_get_lines(0, 0, -1, true)
-  local org_file = File.from_content(lines, 'capture', utils.current_file_path())
+  local org_file = File.from_content(lines, {
+    category = 'capture',
+    filename = utils.current_file_path(),
+  })
   local item = nil
   if org_file then
     item = org_file:get_headlines()[1]

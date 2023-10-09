@@ -29,7 +29,7 @@ describe('Notifications', function()
       '* TODO I am the scheduled task for evening',
       '  SCHEDULED: <2021-07-12 Mon 19:30>',
     }
-    local orgfile = File.from_content(lines, 'work', filename)
+    local orgfile = File.from_content(lines, { category = 'work', filename = filename })
     table.insert(config.opts.org_agenda_files, filename)
     Files.orgfiles[filename] = orgfile
     local notifications = Notifications:new()
@@ -95,7 +95,7 @@ describe('Notifications', function()
       '* TODO I am the scheduled task for evening',
       '  SCHEDULED: <2021-07-14 Wed 19:30>',
     }
-    local orgfile = File.from_content(lines, 'work', filename)
+    local orgfile = File.from_content(lines, { category = 'work', filename = filename })
     table.insert(config.opts.org_agenda_files, filename)
     Files.orgfiles[filename] = orgfile
     local notifications = Notifications:new()

@@ -43,25 +43,26 @@ function OrgMappings:archive()
   end
   local item = file:get_closest_headline()
   local archive_location = file:get_archive_file_location()
+  if not archive_location then
+    return
+  end
   local archive_directory = vim.fn.fnamemodify(archive_location, ':p:h')
   if vim.fn.isdirectory(archive_directory) == 0 then
     vim.fn.mkdir(archive_directory, 'p')
   end
   self.capture:refile_file_headline_to_archive(file, item, archive_location)
-  Files.reload(
-    archive_location,
-    vim.schedule_wrap(function()
-      Files.update_file(archive_location, function()
-        local archived_headline = ts_org.find_headline_by_title(item.title, { exact = true, from_end = true })
-        if archived_headline then
-          archived_headline:set_property('ARCHIVE_TIME', Date.now():to_string())
-          archived_headline:set_property('ARCHIVE_FILE', file.filename)
-          archived_headline:set_property('ARCHIVE_CATEGORY', item.category)
-          archived_headline:set_property('ARCHIVE_TODO', item.todo_keyword.value)
-        end
-      end)
+
+  return Files.reload(archive_location):next(function()
+    Files.update_file(archive_location, function()
+      local archived_headline = ts_org.find_headline_by_title(item.title, { exact = true, from_end = true })
+      if archived_headline then
+        archived_headline:set_property('ARCHIVE_TIME', Date.now():to_string())
+        archived_headline:set_property('ARCHIVE_FILE', file.filename)
+        archived_headline:set_property('ARCHIVE_CATEGORY', item.category)
+        archived_headline:set_property('ARCHIVE_TODO', item.todo_keyword.value)
+      end
     end)
-  )
+  end)
 end
 
 ---@param tags? string|string[]

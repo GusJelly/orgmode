@@ -28,7 +28,7 @@ function PackedValue.first(self)
   return first
 end
 
---- @class Promise
+--- @class Promise<T>: { next: fun(self:Promise, ...:fun(...:T):T|Promise<T>):Promise<T> }
 local Promise = {}
 Promise.__index = Promise
 

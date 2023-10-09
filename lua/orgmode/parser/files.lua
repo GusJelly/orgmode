@@ -20,38 +20,34 @@ function Files.new()
   return Files
 end
 
-function Files.load(callback)
+function Files.load()
   local files = config:get_all_files()
   Files.orgfiles = {}
   if #files == 0 then
     Files.loaded = true
-    if callback then
-      callback()
-    end
-    return Files
+    return Promise.resolve(Files)
   end
-  local files_to_process = #files
+  local processed_files = {}
   for _, item in ipairs(files) do
-    File.load(item, function(file)
-      files_to_process = files_to_process - 1
-      if file then
-        if file.clocked_headline then
-          Files.set_clocked_headline(file.clocked_headline)
+    table.insert(
+      processed_files,
+      File.load(item):next(function(file)
+        if file then
+          if file.clocked_headline then
+            Files.set_clocked_headline(file.clocked_headline)
+          end
+          Files.orgfiles[item] = file
         end
-        Files.orgfiles[item] = file
-      end
-
-      if files_to_process == 0 then
-        Files._build_tags()
-        Files.loaded = true
-        if callback then
-          callback()
-        end
-      end
-    end)
+        return file
+      end)
+    )
   end
 
-  return Files
+  return Promise.all(processed_files):next(function()
+    Files._build_tags()
+    Files.loaded = true
+    return Files
+  end)
 end
 
 function Files._set_loaded_file(filename, orgfile)
@@ -61,16 +57,10 @@ function Files._set_loaded_file(filename, orgfile)
   end
 end
 
-function Files.reload(file, callback)
+---@return Promise<File>
+function Files.reload(file)
   if not file then
-    return Files.load(callback)
-  end
-
-  local onfinish = function()
-    if callback then
-      callback()
-    end
-    Files._build_tags()
+    return Files.load()
   end
 
   local old_file = Files.orgfiles[file]
@@ -78,17 +68,17 @@ function Files.reload(file, callback)
 
   if old_file then
     Files._check_source_blocks(old_file, new_file)
-    onfinish()
-    return new_file
+    Files._build_tags()
+    return Promise.resolve(new_file)
   end
 
-  return File.load(file, function(orgfile)
+  return File.load(file):next(function(orgfile)
     if orgfile then
       Files._set_loaded_file(file, orgfile)
       Files._check_source_blocks(old_file, orgfile)
     end
     Files.loaded = true
-    onfinish()
+    Files._build_tags()
     return orgfile
   end)
 end
@@ -123,7 +113,7 @@ function Files.get(file)
   end
 
   if vim.bo.filetype == 'org' and vim.fn.filereadable(file) == 0 then
-    return File.from_content(vim.api.nvim_buf_get_lines(0, 0, -1, false), nil, nil, false)
+    return File.from_content(vim.api.nvim_buf_get_lines(0, 0, -1, false))
   end
 
   return nil

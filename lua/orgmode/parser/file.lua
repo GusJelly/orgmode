@@ -1,11 +1,18 @@
+local Promise = require('orgmode.utils.promise')
 local Range = require('orgmode.parser.range')
 local Duration = require('orgmode.objects.duration')
 local Section = require('orgmode.parser.section')
 local config = require('orgmode.config')
 local utils = require('orgmode.utils')
 
+---@class ContentOpts
+---@field category? string
+---@field filename? string
+---@field is_archive_file? boolean
+---@field bufnr? number
+
 ---@class File
----@field tree userdata
+---@field tree TSTree
 ---@field file_content string[]
 ---@field file_content_str string
 ---@field category string
@@ -20,25 +27,26 @@ local utils = require('orgmode.utils')
 ---@field tags string[]
 local File = {}
 
-function File:new(tree, file_content, file_content_str, category, filename, is_archive_file)
+---@param tree TSTree
+---@param file_content string[]
+---@param file_content_str string
+---@param opts ContentOpts
+function File:new(tree, file_content, file_content_str, opts)
   local changedtick = 0
-  if filename then
-    local bufnr = vim.fn.bufnr(filename)
-    if bufnr > 0 then
-      changedtick = vim.api.nvim_buf_get_var(bufnr, 'changedtick')
-    end
+  if opts.bufnr and opts.bufnr > 0 then
+    changedtick = vim.api.nvim_buf_get_var(opts.bufnr, 'changedtick')
   end
   local data = {
     tree = tree,
     file_content = file_content,
     file_content_str = file_content_str,
-    category = category,
-    filename = filename,
+    category = opts.category or '',
+    filename = opts.filename or '',
     changedtick = changedtick,
     sections = {},
     sections_by_line = {},
     source_code_filetypes = {},
-    is_archive_file = is_archive_file or false,
+    is_archive_file = opts.is_archive_file or false,
     tags = {},
     clocked_headline = nil,
   }
@@ -144,34 +152,34 @@ function File:should_reload()
 end
 
 ---@param path string
----@returns File
-function File.load(path, callback)
+---@return Promise<File|nil>
+function File.load(path)
   local ext = vim.fn.fnamemodify(path, ':e')
   if ext ~= 'org' and ext ~= 'org_archive' then
-    return callback(nil)
+    return Promise.resolve(nil)
   end
   local category = vim.fn.fnamemodify(path, ':t:r')
-  utils.readfile(
-    path,
-    vim.schedule_wrap(function(err, content)
-      if err then
-        return callback(nil)
-      end
-      return callback(File.from_content(content, category, path, ext == 'org_archive'))
-    end)
-  )
+  local opts = {
+    category = category,
+    filename = path,
+    is_archive_file = ext == 'org_archive',
+    bufnr = vim.fn.bufnr(path)
+  }
+  return utils.readfile(path):next(function(content)
+    ---@type File
+    return File.from_content(content, opts)
+  end)
 end
 
 ---@param content table
----@param category? string
----@param filename? string
----@param is_archive_file? boolean
+---@param opts? ContentOpts
 ---@return File|nil
-function File.from_content(content, category, filename, is_archive_file)
+function File.from_content(content, opts)
+  opts = opts or {}
   local str_content = table.concat(content, '\n')
   local trees = vim.treesitter.get_string_parser(str_content, 'org', {}):parse()
   if #trees > 0 then
-    return File:new(trees[1], content, str_content, category, filename, is_archive_file)
+    return File:new(trees[1], content, str_content, opts)
   end
   return nil
 end
@@ -182,7 +190,12 @@ function File:refresh()
   end
   local bufnr = vim.fn.bufnr(self.filename)
   local content = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
-  local refreshed_file = File.from_content(content, self.category, self.filename, self.is_archive_file)
+  local refreshed_file = File.from_content(content, {
+    category = self.category,
+    filename = self.filename,
+    is_archive_file = self.is_archive_file,
+    bufnr = bufnr,
+  })
   refreshed_file.changedtick = vim.api.nvim_buf_get_var(bufnr, 'changedtick')
   if refreshed_file then
     return refreshed_file

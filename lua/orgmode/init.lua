@@ -111,9 +111,9 @@ local function setup(opts)
   config:setup_ts_predicates()
   vim.defer_fn(function()
     if config.notifications.enabled and #vim.api.nvim_list_uis() > 0 then
-      require('orgmode.parser.files').load(vim.schedule_wrap(function()
+      require('orgmode.parser.files').load():next(function()
         instance.notifications = require('orgmode.notifications'):new():start_timer()
-      end))
+      end)
     end
     config:setup_mappings('global')
   end, 1)
@@ -182,9 +182,9 @@ local function cron(opts)
   if not config.notifications.cron_enabled then
     return vim.cmd([[qa!]])
   end
-  require('orgmode.parser.files').load(vim.schedule_wrap(function()
+  require('orgmode.parser.files').load():next(function()
     instance.notifications = require('orgmode.notifications'):new():cron()
-  end))
+  end)
 end
 
 local function get_instance()

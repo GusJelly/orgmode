@@ -10,7 +10,7 @@ local function generate(content_line, keyword)
   local parsed = File.from_content({
     '* ' .. keyword .. ' This is some content',
     content_line,
-  }, '', '')
+  })
   return parsed:get_section(1)
 end
 
