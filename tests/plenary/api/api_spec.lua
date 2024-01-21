@@ -271,4 +271,19 @@ describe('Api', function()
     }, vim.api.nvim_buf_get_lines(0, 0, -1, false))
     assert.are.same(api.current().headlines[2]:get_property('NAME'), 'test')
   end)
+
+  it('sets the id on headline', function()
+    helpers.load_file_content({
+      '* TODO Test orgmode',
+      '  SCHEDULED: <2021-07-21 Wed 22:02>',
+      '** TODO Second level :NESTEDTAG:',
+      '  DEADLINE: <2021-07-21 Wed 22:02>',
+      '* TODO Some task',
+    })
+
+    local id = api.current().headlines[2]:id_get_or_create()
+    assert.is.True(id:match('%x%x%x%x%x%x%x%-%x%x%x%x%-%x%x%x%x%-%x%x%x%x%-%x%x%x%x%x%x%x%x%x%x%x%x') ~= nil)
+    assert.are.same(api.current().headlines[2]:get_property('ID'), id)
+    assert.are.same(vim.fn.getline(6), ('   :ID: %s'):format(id))
+  end)
 end)
